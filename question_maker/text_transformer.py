@@ -116,3 +116,72 @@ def extract_paragraphs(text: str) -> Dict[str, Any]:
         'paragraphs': paragraphs,
         'paragraph_count': len(paragraphs)
     }
+
+
+def extract_multiple_choice_questions(text: str) -> Dict[str, Any]:
+    """
+    Extract multiple-choice questions from text
+    
+    Expects questions in the format:
+    Question text?
+    A Option 1
+    B Option 2
+    C Option 3
+    ...
+    
+    Returns:
+        Dictionary containing extracted questions and metadata
+    """
+    import re
+    from .data_models import MultipleChoiceQuestion
+    
+    questions = []
+    lines = text.split('\n')
+    current_question = None
+    current_position = 0
+    line_position = 0
+    question_number = 1
+    
+    for i, line in enumerate(lines):
+        line = line.strip()
+        line_position += len(lines[i]) + 1  # +1 for newline character
+        
+        if not line:
+            continue
+            
+        # Check if line is an option (starts with single letter followed by space)
+        option_match = re.match(r'^([A-Z])\s+(.+)$', line)
+        
+        if option_match:
+            if current_question is not None:
+                label, option_text = option_match.groups()
+                current_question.add_option(label, option_text)
+        else:
+            # This is likely a new question
+            if current_question is not None:
+                # Finalize the previous question
+                current_question.end_position = line_position - len(line) - 1
+                if current_question.options:  # Only add if it has options
+                    questions.append(current_question)
+            
+            # Start a new question
+            current_question = MultipleChoiceQuestion(
+                question=line,
+                question_number=question_number,
+                start_position=line_position - len(line) - 1
+            )
+            question_number += 1
+    
+    # Don't forget the last question
+    if current_question is not None and current_question.options:
+        current_question.end_position = len(text)
+        questions.append(current_question)
+    
+    # Convert questions to dictionaries for serialization
+    questions_data = [q.to_dict() for q in questions]
+    
+    return {
+        'multiple_choice_questions': questions_data,
+        'question_count': len(questions_data),
+        'questions_with_options': sum(1 for q in questions_data if q.get('options'))
+    }

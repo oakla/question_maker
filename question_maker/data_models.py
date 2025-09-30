@@ -57,3 +57,41 @@ class TextSegment:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary representation"""
         return asdict(self)
+
+
+@dataclass
+class MultipleChoiceQuestion:
+    """
+    Represents a multiple-choice question with its options
+    
+    Attributes:
+        question: The question text
+        options: Dictionary mapping option labels (A, B, C, etc.) to option text
+        question_number: Optional question number or identifier
+        start_position: Starting position in original text
+        end_position: Ending position in original text
+    """
+    question: str
+    options: Dict[str, str] = field(default_factory=dict)
+    question_number: Optional[int] = None
+    start_position: int = 0
+    end_position: int = 0
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary representation"""
+        return asdict(self)
+    
+    def add_option(self, label: str, text: str) -> None:
+        """Add an option to the question"""
+        self.options[label] = text
+    
+    def get_option_labels(self) -> List[str]:
+        """Get sorted list of option labels"""
+        return sorted(self.options.keys())
+    
+    def get_full_text(self) -> str:
+        """Get the full question text including all options"""
+        result = self.question
+        for label in self.get_option_labels():
+            result += f"\n{label} {self.options[label]}"
+        return result
